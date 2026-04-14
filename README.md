@@ -18,4 +18,14 @@ Planned outputs for Goal 0:
 2. Basic parsing + error handling
 3. Token budgeting helpers
 
-Next: we will expand into prompt templates, tool calling, and agent loops once Goal 0 is solid.
+**Goal 1 — Prompts as Data**
+Treat prompts as structured data instead of plain strings.
+
+What we’re building:
+1. Prompt template system (string interpolation + validation)
+2. System/user/assistant message assembly
+3. Prompt registry stored in JSON or YAML
+
+Planned outputs for Goal 1:
+1. `prompts/` folder
+2. `prompt_engine.py`

@@ -1,0 +1,18 @@
+{
+  "prompts": {
+    "summarize": {
+      "description": "Summarize a topic in a requested length.",
+      "variables": ["topic", "length"],
+      "messages": [
+        {
+          "role": "system",
+          "template": "You are a concise technical assistant."
+        },
+        {
+          "role": "user",
+          "template": "Summarize {topic} in {length}."
+        }
+      ]
+    }
+  }
+}
