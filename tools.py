@@ -1,4 +1,5 @@
 import json
+import ast
 from dataclasses import dataclass
 from typing import Any, Callable, Dict
 
@@ -47,14 +48,52 @@ def _calculator(args: Dict[str, Any]) -> Dict[str, Any]:
     expr = args.get("expression", "")
     if not isinstance(expr, str) or not expr.strip():
         raise ToolError("calculator requires a non-empty 'expression' string")
-    # Safe-ish eval: only allow digits and basic operators
-    allowed = set("0123456789+-*/(). ")
+
+    expr = expr.strip()
+    if len(expr) > 200:
+        raise ToolError("calculator expression is too long")
+
+    allowed = set("0123456789+-*/(). %\t\n\r")
     if any(ch not in allowed for ch in expr):
         raise ToolError("calculator expression contains invalid characters")
+
+    def _eval_node(node: ast.AST) -> float:
+        if isinstance(node, ast.Expression):
+            return _eval_node(node.body)
+        if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+            # Limit literal size to avoid huge ints chewing CPU/memory.
+            if isinstance(node.value, int) and len(str(abs(node.value))) > 30:
+                raise ToolError("calculator number literal is too large")
+            return float(node.value)
+        if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+            val = _eval_node(node.operand)
+            return val if isinstance(node.op, ast.UAdd) else -val
+        if isinstance(node, ast.BinOp) and isinstance(
+            node.op, (ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Mod)
+        ):
+            left = _eval_node(node.left)
+            right = _eval_node(node.right)
+            if isinstance(node.op, ast.Add):
+                return left + right
+            if isinstance(node.op, ast.Sub):
+                return left - right
+            if isinstance(node.op, ast.Mult):
+                return left * right
+            if isinstance(node.op, ast.Div):
+                return left / right
+            return left % right
+        raise ToolError("calculator expression contains unsupported operations")
+
     try:
-        value = eval(expr, {"__builtins__": {}}, {})
-    except Exception as e:
-        raise ToolError(f"calculator error: {e}") from e
+        parsed = ast.parse(expr, mode="eval")
+    except SyntaxError as e:
+        raise ToolError(f"calculator syntax error: {e.msg}") from e
+
+    try:
+        value = _eval_node(parsed)
+    except ZeroDivisionError as e:
+        raise ToolError("calculator error: division by zero") from e
+
     return {"result": value}
 
 

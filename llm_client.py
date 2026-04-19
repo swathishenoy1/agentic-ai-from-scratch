@@ -33,8 +33,16 @@ def _truncate_to_token_budget(text: str, max_tokens: int) -> str:
     max_chars = max_tokens * CHARS_PER_TOKEN
     if len(text) <= max_chars:
         return text
-    # Keep the tail of the prompt; often contains the most recent instructions
-    return text[-max_chars:]
+    # Keep both the beginning (often system/tool instructions) and the end
+    # (most recent turns). This reduces the chance of truncating critical
+    # agent/tool formatting rules.
+    head_chars = max(256, max_chars // 4)
+    head = text[: min(len(text), head_chars)]
+    tail_chars = max_chars - len(head)
+    if tail_chars <= 0:
+        return head
+    tail = text[-tail_chars:]
+    return head + "\n...\n" + tail
 
 
 def _build_payload(prompt: str, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -89,12 +97,11 @@ def complete(prompt: str, **params: Any) -> str:
     Optional env vars:
       - LLM_MODEL, LLM_TIMEOUT_SEC, LLM_MAX_INPUT_TOKENS, LLM_CHARS_PER_TOKEN
     """
-    if not DEFAULT_API_URL:
-        raise LLMClientError("LLM_API_URL is not set.")
-
     api_url = params.pop("api_url", DEFAULT_API_URL)
     api_key = params.pop("api_key", DEFAULT_API_KEY)
     model = params.pop("model", DEFAULT_MODEL)
+    if not api_url:
+        raise LLMClientError("LLM_API_URL is not set (and no api_url override was provided).")
 
     max_input_tokens = int(params.pop("max_input_tokens", DEFAULT_MAX_INPUT_TOKENS))
     token_estimate = _estimate_tokens(prompt)
