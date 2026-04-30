@@ -1,14 +1,7 @@
 import json
-import re
 from typing import Any, Dict, Optional, Tuple
 
 from tools import ToolRegistry, ToolError, serialize_result
-
-
-CALL_RE = re.compile(
-    r"CALL_TOOL\(\s*(?P<name>(\"[^\"]+\"|'[^']+'|[A-Za-z0-9_\-]+))\s*,\s*(?P<args>\{.*\})\s*\)",
-    re.DOTALL,
-)
 
 
 class ToolCallError(Exception):
@@ -16,28 +9,71 @@ class ToolCallError(Exception):
 
 
 def parse_tool_call(text: str) -> Optional[Tuple[str, Dict[str, Any]]]:
-    match = CALL_RE.search(text)
-    if not match:
+    # Intentionally strict: the agent system prompt asks the model to output
+    # exactly one tool call (and nothing else) when invoking tools.
+    s = text.strip()
+    if not s.startswith("CALL_TOOL("):
         return None
 
-    raw_name = match.group("name").strip()
-    if (raw_name.startswith('"') and raw_name.endswith('"')) or (
-        raw_name.startswith("'") and raw_name.endswith("'")
-    ):
-        name = raw_name[1:-1]
-    else:
-        name = raw_name
+    i = len("CALL_TOOL(")
+    n = len(s)
 
-    raw_args = match.group("args")
+    def _skip_ws(idx: int) -> int:
+        while idx < n and s[idx].isspace():
+            idx += 1
+        return idx
+
+    i = _skip_ws(i)
+
+    # Parse tool name (quoted or unquoted)
+    if i >= n:
+        raise ToolCallError("Incomplete tool call (missing name)")
+
+    if s[i] in {"'", '"'}:
+        quote = s[i]
+        i += 1
+        start = i
+        while i < n and s[i] != quote:
+            i += 1
+        if i >= n:
+            raise ToolCallError("Unterminated quoted tool name")
+        name = s[start:i]
+        i += 1
+    else:
+        start = i
+        while i < n and s[i] not in {",", " ", "\t", "\n", "\r"}:
+            i += 1
+        name = s[start:i].strip()
+        if not name:
+            raise ToolCallError("Tool name is empty")
+
+    i = _skip_ws(i)
+    if i >= n or s[i] != ",":
+        raise ToolCallError("Expected ',' after tool name")
+    i += 1
+    i = _skip_ws(i)
+
+    # Parse JSON args object using the JSON decoder (avoids greedy regex issues).
+    if i >= n or s[i] != "{":
+        raise ToolCallError("Tool args must be a JSON object starting with '{'")
+
+    decoder = json.JSONDecoder()
     try:
-        args = json.loads(raw_args)
+        args_obj, end = decoder.raw_decode(s, idx=i)
     except json.JSONDecodeError as e:
         raise ToolCallError(f"Invalid JSON args for tool call: {e}") from e
 
-    if not isinstance(args, dict):
+    i = _skip_ws(end)
+    if i >= n or s[i] != ")":
+        raise ToolCallError("Expected ')' after tool args")
+    i += 1
+    if s[i:].strip():
+        raise ToolCallError("Unexpected trailing text after tool call")
+
+    if not isinstance(args_obj, dict):
         raise ToolCallError("Tool args must be a JSON object")
 
-    return name, args
+    return name, args_obj
 
 
 def execute_tool_call(text: str, registry: ToolRegistry) -> Optional[str]:
