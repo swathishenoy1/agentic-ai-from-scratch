@@ -96,7 +96,7 @@ How to run it:
 2. Multiple candidates + verbose trace: `python orchestrator.py --task "..." --candidates 3 --verbose`
 3. Disable voting (critic-only ranking): `python orchestrator.py --task "..." --no-vote`
 
-## Goal 5 - Simple Evals
+**Goal 5 — Simple Evals**
 Measure whether the agent/orchestrator outputs contain expected keywords for sample tasks.
 
 What we are building:
@@ -104,14 +104,14 @@ What we are building:
 2. A runner that calls `agent.py` or `orchestrator.py`
 3. Pass/fail summary output
 
-Deliverable:
-- `evals.py`
-- `evals/smoke.json`
+Planned outputs:
+1. `evals.py`
+2. `evals/smoke.json`
 
-Run it:
-- With a real LLM: `python evals.py --cases evals/smoke.json`
-- Harness-only check: `python evals.py --mock-answer "84 rate limit"`
-- Full results: `python evals.py --json --mock-answer "84 rate limit"`
+How to run it:
+1. With a real LLM: `python evals.py --cases evals/smoke.json`
+2. Harness-only check: `python evals.py --mock-answer "84 rate limit"`
+3. Full results: `python evals.py --json --mock-answer "84 rate limit"`
 
 
 ## Running everything together
