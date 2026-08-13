@@ -96,26 +96,6 @@ How to run it:
 2. Multiple candidates + verbose trace: `python orchestrator.py --task "..." --candidates 3 --verbose`
 3. Disable voting (critic-only ranking): `python orchestrator.py --task "..." --no-vote`
 
-## Running everything together
-
-From the repo root:
-
-1. Set your LLM env vars:
-   - `export LLM_API_URL="https://<your-llm-endpoint>"`
-   - `export LLM_API_KEY="..."` (optional if your API doesn’t require it)
-   - `export LLM_MODEL="..."` (optional)
-
-2. Run a task:
-   - `python agent.py --task "Compute 12*(3+4) using the calculator tool."`
-
-3. Run using a prompt from `prompts/registry.json`:
-   - `python agent.py --prompt summarize --var topic="rate limiting" --var length="3 bullets"`
-
-4. Use memory (file-based, keyword retrieval):
-   - Remember runs: `python agent.py --task "..." --remember`
-   - Retrieve context: `python agent.py --task "..." --memory-search-k 3`
-
-
 ## Goal 5 - Simple Evals
 Measure whether the agent/orchestrator outputs contain expected keywords for sample tasks.
 
@@ -132,3 +112,49 @@ Run it:
 - With a real LLM: `python evals.py --cases evals/smoke.json`
 - Harness-only check: `python evals.py --mock-answer "84 rate limit"`
 - Full results: `python evals.py --json --mock-answer "84 rate limit"`
+
+
+## Running everything together
+
+Use `agent.py` when you want the single-agent flow with prompts, tools, and memory. Use `orchestrator.py` when you want multiple roles to collaborate on one task. Use `evals.py` when you want to run repeatable checks over either flow.
+
+From the repo root:
+
+1. Set your LLM env vars:
+   - `export LLM_API_URL="https://<your-llm-endpoint>"`
+   - `export LLM_API_KEY="..."` (optional if your API does not require it)
+   - `export LLM_MODEL="..."` (optional)
+
+2. Run a direct tool-using agent task:
+   - `python agent.py --task "Compute 12*(3+4) using the calculator tool."`
+
+3. Run the agent with a prompt from `prompts/registry.json`:
+   - `python agent.py --prompt summarize --var topic="rate limiting" --var length="3 bullets"`
+
+4. Store a run in long-term memory:
+   - `python agent.py --task "Remember that Swathi prefers concise technical summaries." --remember`
+
+5. Retrieve memory while answering a new task:
+   - `python agent.py --task "How should I format technical summaries?" --memory-search-k 3`
+
+6. Run the multi-agent orchestrator:
+   - `python orchestrator.py --task "Explain the difference between rate limiting and backpressure." --candidates 3 --verbose`
+
+7. Run smoke evals without calling an LLM:
+   - `python evals.py --mock-answer "84 rate limit"`
+
+8. Run smoke evals against your configured LLM:
+   - `python evals.py --cases evals/smoke.json`
+
+The typical full workflow while developing is:
+
+```bash
+export LLM_API_URL="https://<your-llm-endpoint>"
+export LLM_API_KEY="..."
+export LLM_MODEL="..."
+
+python agent.py --task "Compute 12*(3+4) using the calculator tool." --remember
+python agent.py --task "What calculation did I just ask for?" --memory-search-k 3
+python orchestrator.py --task "Explain rate limiting in one concise paragraph." --candidates 2
+python evals.py --cases evals/smoke.json
+```
