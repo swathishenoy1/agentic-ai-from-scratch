@@ -96,7 +96,6 @@ How to run it:
 2. Multiple candidates + verbose trace: `python orchestrator.py --task "..." --candidates 3 --verbose`
 3. Disable voting (critic-only ranking): `python orchestrator.py --task "..." --no-vote`
 
-
 ## Running everything together
 
 From the repo root:
@@ -115,3 +114,21 @@ From the repo root:
 4. Use memory (file-based, keyword retrieval):
    - Remember runs: `python agent.py --task "..." --remember`
    - Retrieve context: `python agent.py --task "..." --memory-search-k 3`
+
+
+## Goal 5 - Simple Evals
+Measure whether the agent/orchestrator outputs contain expected keywords for sample tasks.
+
+What we are building:
+1. JSON eval cases
+2. A runner that calls `agent.py` or `orchestrator.py`
+3. Pass/fail summary output
+
+Deliverable:
+- `evals.py`
+- `evals/smoke.json`
+
+Run it:
+- With a real LLM: `python evals.py --cases evals/smoke.json`
+- Harness-only check: `python evals.py --mock-answer "84 rate limit"`
+- Full results: `python evals.py --json --mock-answer "84 rate limit"`

@@ -1,0 +1,17 @@
+{
+  "cases": [
+    {
+      "name": "calculator-basic",
+      "runner": "agent",
+      "task": "Compute 12*(3+4) using the calculator tool.",
+      "expected_contains": ["84"]
+    },
+    {
+      "name": "explain-rate-limiting",
+      "runner": "orchestrator",
+      "task": "Explain rate limiting in one concise paragraph.",
+      "expected_contains": ["rate", "limit"],
+      "candidates": 2
+    }
+  ]
+}
